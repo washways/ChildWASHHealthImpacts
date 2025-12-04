@@ -1,0 +1,1906 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Child Health & Nutrition – WASH Focus</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Chart.js and PapaParse from CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+  <style>
+    :root {
+      --bg: #f3f8fc;
+      --panel-bg: #ffffff;
+      --accent: #00aef3;      /* UNICEF blue */
+      --accent-soft: #d7efff;
+      --text: #1f2933;
+      --muted: #5f6c80;
+      --border: #c9d5e3;
+
+      /* WASH buckets */
+      --wash-core: #e53935;   /* red */
+      --wash-ext:  #ffb300;   /* amber */
+      --wash-non:  #9e9e9e;   /* grey */
+
+      /* Nutrition categories */
+      --nut-direct:  #2e7d32; /* green */
+      --nut-washinfx: #6a1b9a; /* purple */
+      --nut-other:   #90a4ae; /* blue-grey */
+
+      /* Nutrition lines */
+      --nut-stunting: #2e7d32;
+      --nut-wasting:  #6a1b9a;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    header {
+      padding: 0.8rem 1.5rem;
+      background: var(--panel-bg);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+    .brand {
+      display: flex;
+      align-items: baseline;
+      gap: 0.6rem;
+    }
+    .brand-main {
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+    .brand-tagline {
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    header h1 {
+      font-size: 1.25rem;
+      margin: 0;
+    }
+    header small {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    #app {
+      display: flex;
+      flex-wrap: wrap;
+      min-height: calc(100vh - 60px);
+    }
+    aside {
+      flex: 0 0 290px;
+      max-width: 340px;
+      padding: 1rem 1.25rem;
+      background: var(--panel-bg);
+      border-right: 1px solid var(--border);
+    }
+    #content {
+      flex: 1 1 0;
+      display: flex;
+      flex-direction: column;
+      padding: 0.75rem 1.25rem 1rem;
+      gap: 0.75rem;
+    }
+    main {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    @media (max-width: 900px) {
+      #app { flex-direction: column; }
+      aside {
+        flex: none;
+        max-width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+      }
+    }
+
+    @media (max-width: 600px) {
+      canvas {
+        height: 260px !important;
+      }
+    }
+
+    .tabs {
+      display: inline-flex;
+      border-radius: 999px;
+      background: #e4f1fb;
+      padding: 0.15rem;
+      align-self: flex-start;
+      margin-bottom: 0.25rem;
+    }
+    .tab-btn {
+      border: none;
+      background: transparent;
+      padding: 0.35rem 0.9rem;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      color: var(--muted);
+    }
+    .tab-btn.active {
+      background: var(--panel-bg);
+      color: var(--accent);
+      font-weight: 600;
+      box-shadow: 0 2px 6px rgba(15, 40, 80, 0.12);
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .control-group {
+      margin-bottom: 0.9rem;
+    }
+    .control-group label {
+      display: block;
+      font-size: 0.85rem;
+      margin-bottom: 0.25rem;
+      font-weight: 600;
+    }
+    .control-group select,
+    .control-group input[type="range"],
+    .control-group input[type="text"] {
+      width: 100%;
+      padding: 0.35rem 0.45rem;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      font-size: 0.9rem;
+      background: #f9fbff;
+    }
+    .multi-help {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 0.15rem;
+    }
+    .radio-row,
+    .checkbox-col {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-top: 0.25rem;
+    }
+    .radio-row label,
+    .checkbox-col label {
+      font-size: 0.85rem;
+      font-weight: 400;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+    .slider-value {
+      font-size: 0.8rem;
+      color: var(--muted);
+      text-align: right;
+      margin-top: 0.1rem;
+    }
+
+    button {
+      font-size: 0.8rem;
+      border-radius: 999px;
+      padding: 0.3rem 0.8rem;
+      border: 1px solid var(--accent);
+      background: var(--accent);
+      color: white;
+      cursor: pointer;
+    }
+    button.secondary {
+      background: transparent;
+      color: var(--accent);
+    }
+    button:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+
+    .panel {
+      background: var(--panel-bg);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      padding: 0.75rem 0.9rem 0.95rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+      box-shadow: 0 4px 10px rgba(15, 40, 80, 0.04);
+    }
+    .panel h2 {
+      font-size: 1rem;
+      margin: 0 0 0.1rem;
+    }
+    .panel p {
+      margin: 0;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    canvas {
+      max-width: 100%;
+      height: 340px !important;
+    }
+    #healthSummary,
+    #nutritionSummary {
+      font-size: 0.85rem;
+      color: var(--text);
+      margin-top: 0.25rem;
+    }
+    #healthSummary strong,
+    #nutritionSummary strong {
+      color: var(--accent);
+    }
+    footer {
+      font-size: 0.75rem;
+      color: var(--muted);
+      padding-top: 0.25rem;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.1rem 0.45rem;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    .status {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+    .status.error {
+      color: #c62828;
+    }
+    .control-row-inline {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+    .control-row-inline button {
+      flex: 0 0 auto;
+    }
+
+    /* Splash screen */
+    #splash {
+      position: fixed;
+      inset: 0;
+      background: rgba(9, 30, 66, 0.78);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    #splash.hidden {
+      display: none;
+    }
+    .splash-panel {
+      background: #ffffff;
+      border-radius: 12px;
+      max-width: 780px;
+      width: 90%;
+      max-height: 90vh;
+      padding: 1.25rem 1.4rem;
+      overflow-y: auto;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+    }
+    .splash-panel h2 {
+      margin-top: 0;
+      margin-bottom: 0.3rem;
+      font-size: 1.1rem;
+    }
+    .splash-panel p {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin: 0.25rem 0;
+    }
+    .splash-panel ul {
+      margin: 0.25rem 0 0.4rem;
+      padding-left: 1.1rem;
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+    .splash-panel li {
+      margin-bottom: 0.2rem;
+    }
+    .splash-panel strong {
+      color: var(--accent);
+    }
+    .splash-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.6rem;
+    }
+    .splash-actions label {
+      font-size: 0.8rem;
+      color: var(--muted);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+  </style>
+</head>
+<body>
+  <!-- Splash / methodology overlay -->
+  <div id="splash">
+    <div class="splash-panel">
+      <h2>Child health &amp; nutrition – WASH-focused prototype</h2>
+      <p>
+        This prototype uses Global Burden of Disease (GBD 2023) cause-level data to show how different diseases affect children at different ages,
+        and how much of that burden is linked to water, sanitation and hygiene (WASH).
+      </p>
+      <p>
+        A separate Nutrition tab keeps nutrition and infection burdens conceptually distinct, while highlighting how
+        <strong>direct undernutrition</strong> and <strong>WASH-linked infections</strong> stack up across child age groups.
+        Under-five stunting and wasting are pulled from the World Bank JME series for context.
+      </p>
+      <ul>
+        <li><strong>Health tab:</strong> all causes, grouped into WASH Core, WASH Extended and Non-WASH; three charts mirroring your original app.</li>
+        <li><strong>Nutrition tab:</strong> same controls and layout, but focused on:
+          <ul>
+            <li><strong>Direct undernutrition</strong> (e.g. protein–energy malnutrition, micronutrient deficiencies), and</li>
+            <li><strong>WASH-linked infections</strong> (e.g. diarrhoea, intestinal worms, neonatal sepsis) that damage growth.</li>
+          </ul>
+        </li>
+        <li>Age-wise bars in the Nutrition tab show how these two streams shift from early childhood through adolescence.</li>
+      </ul>
+      <p>
+        This is an internal UNICEF analytical tool to support WASH, health and nutrition dialogue. Values are indicative and should be
+        interpreted together with national surveillance, DHS/MICS and programme data.
+      </p>
+      <div class="splash-actions">
+        <label>
+          <input type="checkbox" id="dontShowSplash" />
+          Don’t show this again on this device
+        </label>
+        <button id="dismissSplashBtn">Start exploring</button>
+      </div>
+    </div>
+  </div>
+
+  <header>
+    <div>
+      <div class="brand">
+        <span class="brand-main">UNICEF</span>
+        <span class="brand-tagline">for every child</span>
+      </div>
+      <h1>Child Health &amp; Nutrition – WASH Focus</h1>
+      <small>GBD 2023 causes + stunting/wasting (JME) with a WASH lens</small>
+    </div>
+  </header>
+
+  <div id="app">
+    <aside>
+      <div id="healthStatus" class="status">Loading health (GBD) data…</div>
+      <div id="nutritionStatus" class="status">Nutrition (stunting/wasting) will load when you open the Nutrition tab.</div>
+
+      <!-- Shared controls for both tabs -->
+      <div class="control-group">
+        <label for="countrySelect">Country</label>
+        <select id="countrySelect"></select>
+      </div>
+
+      <div class="control-group">
+        <label for="measureSelect">Measure</label>
+        <select id="measureSelect"></select>
+      </div>
+
+      <div class="control-group">
+        <label for="metricSelect">Metric</label>
+        <select id="metricSelect"></select>
+      </div>
+
+      <div class="control-group">
+        <label for="ageSelect">Child age bands</label>
+        <div class="control-row-inline">
+          <select id="ageSelect" multiple size="8" style="flex:1 1 0;"></select>
+          <button id="selectAllAgesBtn" type="button" class="secondary">All</button>
+        </div>
+        <div class="multi-help">Hold Ctrl (Windows) or Cmd (Mac) to select multiple.</div>
+        <div class="control-row-inline" style="margin-top:0.35rem;">
+          <button id="under5Btn" type="button" class="secondary" style="flex:1 1 auto;">Under-5 view (0–4 years)</button>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label>Display mode (age-based charts)</label>
+        <div class="radio-row">
+          <label><input type="radio" name="mode" value="absolute" checked /> Absolute burden</label>
+          <label><input type="radio" name="mode" value="share" /> Share of age-specific total (%)</label>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label for="topNRange">Top N causes (cause-based charts)</label>
+        <input type="range" id="topNRange" min="5" max="25" value="10" />
+        <div class="slider-value"><span id="topNValue">10</span> causes</div>
+      </div>
+
+      <div class="control-group">
+        <label for="causeFilter">Filter causes (text)</label>
+        <input id="causeFilter" type="text" placeholder="e.g. diarrheal, sepsis, malnutrition…" />
+      </div>
+
+      <!-- Health-specific controls -->
+      <div id="healthControls">
+        <div class="control-group">
+          <label>Include WASH buckets (Health tab)</label>
+          <div class="checkbox-col">
+            <label><input type="checkbox" name="washBucket" value="WASH Core" checked /> WASH Core</label>
+            <label><input type="checkbox" name="washBucket" value="WASH Extended" checked /> WASH Extended</label>
+            <label><input type="checkbox" name="washBucket" value="Non-WASH" checked /> Non-WASH</label>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <button id="resetHealthBtn" type="button" class="secondary" style="width:100%;">Reset health filters</button>
+        </div>
+
+        <footer>
+          Health data expected: <code>IHMEGBD2023.csv</code> in this folder.<br />
+          Run <code>python -m http.server</code> and open <code>http://localhost:8000</code>.
+        </footer>
+      </div>
+
+      <!-- Nutrition-specific controls -->
+      <div id="nutritionControls" class="hidden">
+        <div class="control-group">
+          <label>Include nutrition categories (Nutrition tab)</label>
+          <div class="checkbox-col">
+            <label><input type="checkbox" name="nutCategory" value="Direct undernutrition" checked /> Direct undernutrition</label>
+            <label><input type="checkbox" name="nutCategory" value="WASH-linked infections" checked /> WASH-linked infections</label>
+            <label><input type="checkbox" name="nutCategory" value="Other" /> Other causes</label>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <button id="resetNutritionBtn" type="button" class="secondary" style="width:100%;">Reset nutrition filters</button>
+        </div>
+
+        <footer>
+          Nutrition view uses the same GBD extract, but focuses on nutrition-relevant causes. Under-five stunting/wasting come from the World Bank JME API.
+        </footer>
+      </div>
+    </aside>
+
+    <div id="content">
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="health">Health (WASH buckets)</button>
+        <button class="tab-btn" data-tab="nutrition">Nutrition &amp; WASH</button>
+      </div>
+
+      <!-- HEALTH MAIN -->
+      <main id="healthMain">
+        <section class="panel">
+          <div class="pill">Health – Chart 1</div>
+          <h2>Top causes by age band (stacked by age)</h2>
+          <p>Each bar is a cause. Colours show which age bands carry the burden for the selected country, measure and metric.</p>
+          <canvas id="causeAgeChart"></canvas>
+        </section>
+
+        <section class="panel">
+          <div class="pill">Health – Chart 2</div>
+          <h2>Age-wise burden by WASH bucket</h2>
+          <p>Each bar is an age band. Colours split the burden into WASH Core, WASH Extended and Non-WASH causes. Switch between absolute burden and percentage splits.</p>
+          <canvas id="ageWashChart"></canvas>
+        </section>
+
+        <section class="panel">
+          <div class="pill">Health – Chart 3</div>
+          <h2>Top causes by WASH bucket</h2>
+          <p>Each bar is a cause. Colours classify causes into WASH Core, WASH Extended and Non-WASH based on dominant transmission pathways.</p>
+          <canvas id="causeWashChart"></canvas>
+          <div id="healthSummary"></div>
+
+          <footer>
+            Source: Global Burden of Disease Study 2023 (GBD 2023) Results, Institute for Health Metrics and Evaluation (IHME).<br />
+            Internal UNICEF analytical prototype – not for standalone publication.
+          </footer>
+        </section>
+      </main>
+
+      <!-- NUTRITION MAIN -->
+      <main id="nutritionMain" class="hidden">
+        <section class="panel">
+          <div class="pill">Nutrition – Chart 1</div>
+          <h2>Nutrition-relevant causes by age band</h2>
+          <p>Same structure as the Health tab, but restricted to direct undernutrition and WASH-linked infections. Each bar is a cause; colours show age bands carrying that burden.</p>
+          <canvas id="nutritionCauseAgeChart"></canvas>
+        </section>
+
+        <section class="panel">
+          <div class="pill">Nutrition – Chart 2</div>
+          <h2>Age-wise burden: direct undernutrition vs WASH-linked infections</h2>
+          <p>
+            Each bar is an age band. Colours split the burden into:
+            <strong>Direct undernutrition</strong> (e.g. protein–energy malnutrition, micronutrient and anaemia-related causes),
+            <strong>WASH-linked infections</strong> (e.g. diarrhoea, intestinal worms, typhoid, neonatal sepsis),
+            and <strong>Other</strong> causes not mainly driven by WASH or undernutrition.
+            Use the toggle to view either absolute burden or percentage share of each age-specific total.
+          </p>
+          <canvas id="nutritionAgeCategoryChart"></canvas>
+          <div id="nutritionSummary"></div>
+
+          <footer>
+            Nutrition causes are approximated from GBD cause labels. Under-five stunting/wasting are taken from the World Bank
+            World Development Indicators (UNICEF/WHO/World Bank JME series).
+          </footer>
+        </section>
+
+        <section class="panel">
+          <div class="pill">Nutrition – Chart 3</div>
+          <h2>Age profile of top nutrition-relevant causes</h2>
+          <p>
+            This flips Chart&nbsp;1: each bar is an age band and each colour in the legend is a specific nutrition-relevant cause
+            (e.g. diarrhoea, protein–energy malnutrition). Stacks are coloured by whether the cause is classified as
+            <strong>Direct undernutrition</strong> or <strong>WASH-linked infection</strong>, making the link between individual causes and the two nutrition pathways explicit.
+          </p>
+          <canvas id="nutritionAgeCauseChart"></canvas>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    // =========================
+    // CONFIG
+    // =========================
+    const CSV_PATH = "IHMEGBD2023.csv"; // GBD extract saved as CSV in same folder
+
+    const CHILD_AGE_ORDER = [
+      "<28 days",
+      "1-5 months",
+      "6-11 months",
+      "12-23 months",
+      "2-4 years",
+      "5-9 years",
+      "10-14 years",
+      "15-19 years"
+    ];
+
+    const UNDER5_AGES = [
+      "<28 days",
+      "1-5 months",
+      "6-11 months",
+      "12-23 months",
+      "2-4 years"
+    ];
+
+    // WASH Core causes
+    const WASH_CORE_CAUSES = [
+      "Diarrheal diseases",
+      "Typhoid fever",
+      "Paratyphoid fever",
+      "Typhoid and paratyphoid fevers",
+      "Ascariasis",
+      "Trichuriasis",
+      "Hookworm disease",
+      "Schistosomiasis",
+      "Intestinal nematode infections",
+      "Invasive Non-typhoidal Salmonella (iNTS)",
+      "Other intestinal infectious diseases"
+    ];
+
+    // WASH Extended causes
+    const WASH_EXT_CAUSES = [
+      "Lower respiratory infections",
+      "Upper respiratory infections",
+      "Otitis media",
+      "Neonatal sepsis and other neonatal infections",
+      "Maternal sepsis and other maternal infections",
+      "Cellulitis",
+      "Other skin and subcutaneous diseases",
+      "Tetanus",
+      "Urinary tract infections and interstitial nephritis"
+    ];
+
+    // Nutrition – direct undernutrition causes (adjust list as needed to match exact GBD cause_name strings)
+    const NUTR_DIRECT_CAUSES = [
+      "Protein-energy malnutrition",
+      "Other nutritional deficiencies",
+      "Iron-deficiency anemia",
+      "Vitamin A deficiency",
+      "Iodine deficiency",
+      "Zinc deficiency",
+      "Child and maternal undernutrition",
+      "Child wasting",
+      "Child stunting"
+    ];
+
+    // Nutrition – infections important for growth and clearly WASH-linked
+    const NUTR_INFECTION_CAUSES = [
+      "Diarrheal diseases",
+      "Typhoid fever",
+      "Paratyphoid fever",
+      "Typhoid and paratyphoid fevers",
+      "Intestinal nematode infections",
+      "Ascariasis",
+      "Trichuriasis",
+      "Hookworm disease",
+      "Schistosomiasis",
+      "Invasive Non-typhoidal Salmonella (iNTS)",
+      "Other intestinal infectious diseases",
+      "Lower respiratory infections",
+      "Neonatal sepsis and other neonatal infections"
+    ];
+
+    const NUTR_CAT_DESC = {
+      "Direct undernutrition": "Direct undernutrition (e.g. protein–energy malnutrition, micronutrient deficiencies, anaemia)",
+      "WASH-linked infections": "WASH-linked infections (e.g. diarrhoea, intestinal worms, typhoid, neonatal sepsis)",
+      "Other": "Other causes (not primarily WASH or undernutrition)"
+    };
+
+    function getWashBucket(causeName) {
+      if (WASH_CORE_CAUSES.includes(causeName)) return "WASH Core";
+      if (WASH_EXT_CAUSES.includes(causeName)) return "WASH Extended";
+      return "Non-WASH";
+    }
+
+    function getNutritionCategory(causeName) {
+      if (NUTR_DIRECT_CAUSES.includes(causeName)) return "Direct undernutrition";
+      if (NUTR_INFECTION_CAUSES.includes(causeName)) return "WASH-linked infections";
+      return "Other";
+    }
+
+    // World Bank nutrition indicators (JME)
+    const WB_INDICATORS = {
+      stunting: {
+        code: "SH.STA.STNT.ZS",
+        label: "Stunting (% under-5)"
+      },
+      wasting: {
+        code: "SH.STA.WAST.ZS",
+        label: "Wasting (% under-5)"
+      }
+    };
+
+    // Minimal mapping from GBD location_name to ISO3 codes (extend as needed)
+    const ISO3_OVERRIDES = {
+      "Malawi": "MWI",
+      "Mozambique": "MOZ",
+      "Zambia": "ZMB",
+      "Zimbabwe": "ZWE",
+      "Madagascar": "MDG",
+      "Lesotho": "LSO",
+      "Angola": "AGO",
+      "Tanzania": "TZA",
+      "United Republic of Tanzania": "TZA",
+      "Kenya": "KEN",
+      "Uganda": "UGA",
+      "Rwanda": "RWA",
+      "Burundi": "BDI",
+      "Ethiopia": "ETH",
+      "South Africa": "ZAF",
+      "Namibia": "NAM",
+      "Botswana": "BWA",
+      "Eswatini": "SWZ",
+      "Swaziland": "SWZ",
+      "Nigeria": "NGA",
+      "Ghana": "GHA",
+      "Sierra Leone": "SLE",
+      "Liberia": "LBR",
+      "Congo (Kinshasa)": "COD",
+      "Congo (Brazzaville)": "COG",
+      "Democratic Republic of the Congo": "COD",
+      "Congo": "COG",
+      "India": "IND",
+      "Bangladesh": "BGD",
+      "Pakistan": "PAK",
+      "Nepal": "NPL",
+      "Afghanistan": "AFG",
+      "Yemen": "YEM",
+      "Haiti": "HTI"
+    };
+
+    function getIso3ForCountryName(name) {
+      return ISO3_OVERRIDES[name] || null;
+    }
+
+    // =========================
+    // STATE
+    // =========================
+    let rawData = [];
+    let latestYear = null;
+
+    let causeAgeChart = null;
+    let ageWashChart = null;
+    let causeWashChart = null;
+
+    let nutritionCauseAgeChart = null;
+    let nutritionAgeCategoryChart = null;
+    let nutritionAgeCauseChart = null;
+
+    let nutritionCache = {}; // iso3 -> { stunting: [{year,value}], wasting: [...] }
+
+    let activeTab = "health";
+
+    const els = {
+      splash: document.getElementById("splash"),
+      dontShowSplash: document.getElementById("dontShowSplash"),
+      dismissSplashBtn: document.getElementById("dismissSplashBtn"),
+
+      healthStatus: document.getElementById("healthStatus"),
+      nutritionStatus: document.getElementById("nutritionStatus"),
+
+      tabButtons: document.querySelectorAll(".tab-btn"),
+      healthMain: document.getElementById("healthMain"),
+      nutritionMain: document.getElementById("nutritionMain"),
+      healthControls: document.getElementById("healthControls"),
+      nutritionControls: document.getElementById("nutritionControls"),
+
+      countrySelect: document.getElementById("countrySelect"),
+      measureSelect: document.getElementById("measureSelect"),
+      metricSelect: document.getElementById("metricSelect"),
+      ageSelect: document.getElementById("ageSelect"),
+      selectAllAgesBtn: document.getElementById("selectAllAgesBtn"),
+      under5Btn: document.getElementById("under5Btn"),
+      topNRange: document.getElementById("topNRange"),
+      topNValue: document.getElementById("topNValue"),
+      causeFilter: document.getElementById("causeFilter"),
+
+      resetHealthBtn: document.getElementById("resetHealthBtn"),
+      healthSummary: document.getElementById("healthSummary"),
+
+      resetNutritionBtn: document.getElementById("resetNutritionBtn"),
+      nutritionSummary: document.getElementById("nutritionSummary")
+    };
+
+    // =========================
+    // UTILITIES
+    // =========================
+    function uniqueSorted(arr) {
+      return Array.from(new Set(arr)).sort((a, b) => (a > b ? 1 : a < b ? -1 : 0));
+    }
+
+    function sortByChildAge(a, b) {
+      const ia = CHILD_AGE_ORDER.indexOf(a);
+      const ib = CHILD_AGE_ORDER.indexOf(b);
+      if (ia === -1 && ib === -1) return a.localeCompare(b);
+      if (ia === -1) return 1;
+      if (ib === -1) return -1;
+      return ia - ib;
+    }
+
+    function getSelectedAges() {
+      return Array.from(els.ageSelect.options)
+        .filter(o => o.selected)
+        .map(o => o.value);
+    }
+
+    function getMode() {
+      const rb = document.querySelector('input[name="mode"]:checked');
+      return rb ? rb.value : "absolute";
+    }
+
+    function getSelectedBuckets() {
+      const checked = Array.from(document.querySelectorAll('input[name="washBucket"]:checked'))
+        .map(el => el.value);
+      return new Set(checked);
+    }
+
+    function getSelectedNutCategories() {
+      const checked = Array.from(document.querySelectorAll('input[name="nutCategory"]:checked'))
+        .map(el => el.value);
+      return new Set(checked);
+    }
+
+    function buildAgeSuffix(ages) {
+      if (!ages || !ages.length) return "";
+      const sorted = ages.slice().sort(sortByChildAge);
+      if (sorted.length === 1) return ` – age: ${sorted[0]}`;
+      if (sorted.length <= 3) return ` – ages: ${sorted.join(", ")}`;
+      return ` – ages: ${sorted[0]} to ${sorted[sorted.length - 1]}`;
+    }
+
+    function selectAllAges() {
+      Array.from(els.ageSelect.options).forEach(o => { o.selected = true; });
+    }
+
+    function selectUnder5Ages() {
+      Array.from(els.ageSelect.options).forEach(o => {
+        o.selected = UNDER5_AGES.includes(o.value);
+      });
+    }
+
+    function resetHealthFilters() {
+      const options = Array.from(els.countrySelect.options);
+      let idx = options.findIndex(o => o.value === "Malawi");
+      if (idx === -1) idx = 0;
+      if (idx >= 0) els.countrySelect.selectedIndex = idx;
+
+      const measures = Array.from(els.measureSelect.options).map(o => o.value);
+      let midx = measures.indexOf("DALYs (Disability-Adjusted Life Years)");
+      if (midx === -1) midx = 0;
+      if (midx >= 0) els.measureSelect.selectedIndex = midx;
+
+      const metrics = Array.from(els.metricSelect.options).map(o => o.value);
+      let mx = metrics.indexOf("Number");
+      if (mx === -1) mx = 0;
+      if (mx >= 0) els.metricSelect.selectedIndex = mx;
+
+      selectAllAges();
+
+      const absRB = document.querySelector('input[name="mode"][value="absolute"]');
+      if (absRB) absRB.checked = true;
+
+      els.topNRange.value = 10;
+      els.topNValue.textContent = "10";
+
+      document.querySelectorAll('input[name="washBucket"]').forEach(cb => cb.checked = true);
+      els.causeFilter.value = "";
+
+      updateHealthCharts();
+      if (activeTab === "nutrition") updateNutritionCharts();
+    }
+
+    function resetNutritionFilters() {
+      document.querySelectorAll('input[name="nutCategory"]').forEach(cb => {
+        cb.checked = (cb.value === "Direct undernutrition" || cb.value === "WASH-linked infections");
+      });
+      selectUnder5Ages();
+      updateNutritionCharts();
+    }
+
+    function setActiveTab(tab) {
+      activeTab = tab;
+      document.querySelectorAll(".tab-btn").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.tab === tab);
+      });
+      if (tab === "health") {
+        els.healthMain.classList.remove("hidden");
+        els.healthControls.classList.remove("hidden");
+        els.nutritionMain.classList.add("hidden");
+        els.nutritionControls.classList.add("hidden");
+        updateHealthCharts();
+      } else {
+        els.healthMain.classList.add("hidden");
+        els.healthControls.classList.add("hidden");
+        els.nutritionMain.classList.remove("hidden");
+        els.nutritionControls.classList.remove("hidden");
+        updateNutritionCharts();
+      }
+    }
+
+    // Splash
+    function initSplash() {
+      try {
+        const hide = localStorage.getItem("child_wash_splash_hide");
+        if (hide === "true") {
+          els.splash.classList.add("hidden");
+        }
+      } catch (e) {}
+
+      els.dismissSplashBtn.addEventListener("click", () => {
+        els.splash.classList.add("hidden");
+        if (els.dontShowSplash.checked) {
+          try {
+            localStorage.setItem("child_wash_splash_hide", "true");
+          } catch (e) {}
+        }
+      });
+    }
+
+    // =========================
+    // HEALTH DATA LOADING (GBD)
+    // =========================
+    function loadCsv() {
+      els.healthStatus.textContent = "Loading health CSV…";
+      Papa.parse(CSV_PATH, {
+        download: true,
+        header: true,
+        dynamicTyping: true,
+        skipEmptyLines: true,
+        complete: results => {
+          const rows = results.data.filter(row => row.location_name && row.measure_name);
+          rows.forEach(r => {
+            r.year = Number(r.year);
+            r.val = Number(r.val);
+          });
+
+          latestYear = rows.reduce((max, r) => isFinite(r.year) && r.year > max ? r.year : max, 0);
+
+          rawData = rows
+            .filter(r => r.sex_name === "Both" && r.year === latestYear)
+            .map(r => ({
+              ...r,
+              wash_bucket: getWashBucket(String(r.cause_name)),
+              nutrition_category: getNutritionCategory(String(r.cause_name))
+            }));
+
+          initControls();
+          els.healthStatus.textContent = `Loaded ${rawData.length.toLocaleString()} health rows (year ${latestYear}, sex = Both).`;
+        },
+        error: err => {
+          console.error(err);
+          els.healthStatus.textContent = "Error loading health CSV. Check console.";
+          els.healthStatus.classList.add("error");
+        }
+      });
+    }
+
+    // =========================
+    // CONTROLS INIT
+    // =========================
+    function initControls() {
+      const countries = uniqueSorted(rawData.map(r => r.location_name));
+      const measures = uniqueSorted(rawData.map(r => r.measure_name));
+      let metricsAll = uniqueSorted(rawData.map(r => r.metric_name));
+      let metrics = metricsAll.filter(m => m !== "Rate");
+      if (!metrics.length) metrics = metricsAll;
+
+      const ages = uniqueSorted(
+        rawData
+          .map(r => r.age_name)
+          .filter(a => CHILD_AGE_ORDER.includes(a))
+      ).sort(sortByChildAge);
+
+      els.countrySelect.innerHTML = "";
+      countries.forEach(c => {
+        const opt = document.createElement("option");
+        opt.value = c;
+        opt.textContent = c;
+        els.countrySelect.appendChild(opt);
+      });
+
+      els.measureSelect.innerHTML = "";
+      measures.forEach(m => {
+        const opt = document.createElement("option");
+        opt.value = m;
+        opt.textContent = m;
+        els.measureSelect.appendChild(opt);
+      });
+      const dalysIndex = measures.indexOf("DALYs (Disability-Adjusted Life Years)");
+      if (dalysIndex >= 0) els.measureSelect.selectedIndex = dalysIndex;
+
+      els.metricSelect.innerHTML = "";
+      metrics.forEach(m => {
+        const opt = document.createElement("option");
+        opt.value = m;
+        opt.textContent = m;
+        els.metricSelect.appendChild(opt);
+      });
+
+      els.ageSelect.innerHTML = "";
+      ages.forEach(a => {
+        const opt = document.createElement("option");
+        opt.value = a;
+        opt.textContent = a;
+        opt.selected = true;
+        els.ageSelect.appendChild(opt);
+      });
+
+      els.topNValue.textContent = els.topNRange.value;
+
+      // Shared listeners
+      els.countrySelect.addEventListener("change", () => {
+        if (activeTab === "health") updateHealthCharts();
+        else updateNutritionCharts();
+      });
+      els.measureSelect.addEventListener("change", () => {
+        updateHealthCharts();
+        if (activeTab === "nutrition") updateNutritionCharts();
+      });
+      els.metricSelect.addEventListener("change", () => {
+        updateHealthCharts();
+        if (activeTab === "nutrition") updateNutritionCharts();
+      });
+      els.ageSelect.addEventListener("change", () => {
+        updateHealthCharts();
+        if (activeTab === "nutrition") updateNutritionCharts();
+      });
+      els.topNRange.addEventListener("input", () => {
+        els.topNValue.textContent = els.topNRange.value;
+        updateHealthCharts();
+        if (activeTab === "nutrition") updateNutritionCharts();
+      });
+      els.causeFilter.addEventListener("input", () => {
+        updateHealthCharts();
+        if (activeTab === "nutrition") updateNutritionCharts();
+      });
+      document.querySelectorAll('input[name="mode"]').forEach(rb => {
+        rb.addEventListener("change", () => {
+          updateHealthCharts();
+          if (activeTab === "nutrition") updateNutritionCharts();
+        });
+      });
+      els.selectAllAgesBtn.addEventListener("click", () => {
+        selectAllAges();
+        updateHealthCharts();
+        if (activeTab === "nutrition") updateNutritionCharts();
+      });
+      els.under5Btn.addEventListener("click", () => {
+        selectUnder5Ages();
+        updateHealthCharts();
+        if (activeTab === "nutrition") updateNutritionCharts();
+      });
+
+      // Health-specific
+      document.querySelectorAll('input[name="washBucket"]').forEach(cb => {
+        cb.addEventListener("change", updateHealthCharts);
+      });
+      els.resetHealthBtn.addEventListener("click", resetHealthFilters);
+
+      // Nutrition-specific
+      document.querySelectorAll('input[name="nutCategory"]').forEach(cb => {
+        cb.addEventListener("change", updateNutritionCharts);
+      });
+      els.resetNutritionBtn.addEventListener("click", resetNutritionFilters);
+
+      // Tabs
+      document.querySelectorAll(".tab-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          setActiveTab(btn.dataset.tab);
+        });
+      });
+
+      // Initial charts
+      updateHealthCharts();
+    }
+
+    // =========================
+    // HEALTH CHARTS
+    // =========================
+    function getHealthFilteredData() {
+      const country = els.countrySelect.value;
+      const measure = els.measureSelect.value;
+      const metric = els.metricSelect.value;
+      const ages = new Set(getSelectedAges());
+      const buckets = getSelectedBuckets();
+      const causeFilter = els.causeFilter.value.trim().toLowerCase();
+
+      const subset = rawData.filter(r =>
+        r.location_name === country &&
+        r.measure_name === measure &&
+        r.metric_name === metric &&
+        ages.has(r.age_name) &&
+        buckets.has(r.wash_bucket) &&
+        (!causeFilter || String(r.cause_name).toLowerCase().includes(causeFilter))
+      );
+
+      return { country, measure, metric, ages: Array.from(ages), year: latestYear, rows: subset };
+    }
+
+    function updateHealthCharts() {
+      if (!rawData.length) return;
+
+      const mode = getMode();
+      const topN = Number(els.topNRange.value);
+      const { country, measure, metric, ages, year, rows } = getHealthFilteredData();
+
+      if (!rows.length) {
+        if (causeAgeChart) causeAgeChart.destroy();
+        if (ageWashChart) ageWashChart.destroy();
+        if (causeWashChart) causeWashChart.destroy();
+        els.healthSummary.textContent = "No health data for this combination.";
+        return;
+      }
+
+      buildCauseAgeChart(rows, { topN, ages, country, measure, metric, year });
+      buildAgeWashChart(rows, { mode, ages, country, measure, metric, year });
+      buildCauseWashChart(rows, { topN, ages, country, measure, metric, year });
+    }
+
+    function buildCauseAgeChart(rows, ctxInfo) {
+      const { topN, ages, country, measure, metric, year } = ctxInfo;
+
+      const causeAgeMap = new Map();
+      rows.forEach(r => {
+        const cause = String(r.cause_name);
+        const age = String(r.age_name);
+        if (!causeAgeMap.has(cause)) {
+          causeAgeMap.set(cause, { totals: {}, total: 0 });
+        }
+        const obj = causeAgeMap.get(cause);
+        const v = Number(r.val) || 0;
+        obj.totals[age] = (obj.totals[age] || 0) + v;
+        obj.total += v;
+      });
+
+      const sortedCauses = Array.from(causeAgeMap.entries())
+        .sort((a, b) => b[1].total - a[1].total)
+        .slice(0, topN);
+
+      const causeLabels = sortedCauses.map(([cause]) => cause);
+      const ageOrder = Array.from(ages).slice().sort(sortByChildAge);
+
+      const datasets = ageOrder.map(age => ({
+        label: age,
+        data: sortedCauses.map(([_, obj]) => obj.totals[age] || 0),
+        stack: "stack1"
+      }));
+
+      if (causeAgeChart) causeAgeChart.destroy();
+
+      const ctx = document.getElementById("causeAgeChart").getContext("2d");
+      const ageSuffix = buildAgeSuffix(Array.from(ages));
+
+      causeAgeChart = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: causeLabels,
+          datasets
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: "y",
+          plugins: {
+            legend: { position: "top" },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  const val = context.parsed.x || 0;
+                  const cause = context.label;
+                  const age = context.dataset.label;
+                  const total = causeAgeMap.get(cause).total || 0;
+                  const pct = total ? (val / total) * 100 : 0;
+                  return `${age}: ${val.toLocaleString(undefined, { maximumFractionDigits: 2 })} (${pct.toFixed(1)}%)`;
+                }
+              }
+            },
+            title: {
+              display: true,
+              text: `Top ${topN} causes – ${country}, ${measure} (${metric}, ${year})${ageSuffix}`
+            }
+          },
+          scales: {
+            x: {
+              title: {
+                display: true,
+                text: `${measure} – ${metric}`
+              }
+            },
+            y: {
+              ticks: {
+                autoSkip: false,
+                maxTicksLimit: 20
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function buildCauseWashChart(rows, ctxInfo) {
+      const { topN, ages, country, measure, metric, year } = ctxInfo;
+
+      const causeWashMap = new Map();
+      rows.forEach(r => {
+        const cause = String(r.cause_name);
+        const bucket = String(r.wash_bucket);
+        if (!causeWashMap.has(cause)) {
+          causeWashMap.set(cause, {
+            buckets: { "WASH Core": 0, "WASH Extended": 0, "Non-WASH": 0 },
+            total: 0
+          });
+        }
+        const obj = causeWashMap.get(cause);
+        const v = Number(r.val) || 0;
+        obj.buckets[bucket] = (obj.buckets[bucket] || 0) + v;
+        obj.total += v;
+      });
+
+      const sortedCauses = Array.from(causeWashMap.entries())
+        .sort((a, b) => b[1].total - a[1].total)
+        .slice(0, topN);
+
+      const causeLabels = sortedCauses.map(([cause]) => cause);
+
+      const buckets = ["WASH Core", "WASH Extended", "Non-WASH"];
+      const styles = getComputedStyle(document.documentElement);
+      const colors = {
+        "WASH Core": styles.getPropertyValue("--wash-core").trim() || "#e53935",
+        "WASH Extended": styles.getPropertyValue("--wash-ext").trim() || "#ffb300",
+        "Non-WASH": styles.getPropertyValue("--wash-non").trim() || "#9e9e9e"
+      };
+
+      const datasets = buckets.map(bucket => ({
+        label: bucket,
+        data: sortedCauses.map(([_, obj]) => obj.buckets[bucket] || 0),
+        backgroundColor: colors[bucket],
+        stack: "stack1"
+      }));
+
+      if (causeWashChart) causeWashChart.destroy();
+
+      const ctx = document.getElementById("causeWashChart").getContext("2d");
+      const ageSuffix = buildAgeSuffix(Array.from(ages));
+
+      causeWashChart = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: causeLabels,
+          datasets
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: "y",
+          plugins: {
+            legend: { position: "top" },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  const val = context.parsed.x || 0;
+                  const cause = context.label;
+                  const bucket = context.dataset.label;
+                  const entry = causeWashMap.get(cause) || { total: 0 };
+                  const total = entry.total || 0;
+                  const pct = total ? (val / total) * 100 : 0;
+                  return `${bucket}: ${val.toLocaleString(undefined, { maximumFractionDigits: 2 })} (${pct.toFixed(1)}% of ${cause})`;
+                }
+              }
+            },
+            title: {
+              display: true,
+              text: `Top ${topN} causes by WASH bucket – ${country}, ${measure} (${metric}, ${year})${ageSuffix}`
+            }
+          },
+          scales: {
+            x: {
+              title: {
+                display: true,
+                text: `${measure} – ${metric}`
+              }
+            },
+            y: {
+              ticks: { autoSkip: false, maxTicksLimit: 20 }
+            }
+          }
+        }
+      });
+    }
+
+    function buildAgeWashChart(rows, ctxInfo) {
+      const { mode, ages, country, measure, metric, year } = ctxInfo;
+
+      const ageWashMap = new Map();
+      rows.forEach(r => {
+        const age = String(r.age_name);
+        const bucket = String(r.wash_bucket);
+        if (!ageWashMap.has(age)) ageWashMap.set(age, { buckets: {}, total: 0 });
+        const obj = ageWashMap.get(age);
+        const v = Number(r.val) || 0;
+        obj.buckets[bucket] = (obj.buckets[bucket] || 0) + v;
+        obj.total += v;
+      });
+
+      const ageOrder = Array.from(ages).slice().sort(sortByChildAge);
+      const buckets = ["WASH Core", "WASH Extended", "Non-WASH"];
+      const styles = getComputedStyle(document.documentElement);
+      const colors = {
+        "WASH Core": styles.getPropertyValue("--wash-core").trim() || "#e53935",
+        "WASH Extended": styles.getPropertyValue("--wash-ext").trim() || "#ffb300",
+        "Non-WASH": styles.getPropertyValue("--wash-non").trim() || "#9e9e9e"
+      };
+
+      const datasets = buckets.map(bucket => ({
+        label: bucket,
+        data: ageOrder.map(age => {
+          const entry = ageWashMap.get(age);
+          if (!entry) return 0;
+          const rawVal = entry.buckets[bucket] || 0;
+          if (mode === "share") {
+            const total = entry.total || 0;
+            return total ? (rawVal / total) * 100 : 0;
+          }
+          return rawVal;
+        }),
+        backgroundColor: colors[bucket],
+        stack: "stack1"
+      }));
+
+      if (ageWashChart) ageWashChart.destroy();
+
+      const ctx = document.getElementById("ageWashChart").getContext("2d");
+      const ageSuffix = buildAgeSuffix(Array.from(ages));
+
+      ageWashChart = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: ageOrder,
+          datasets
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: "y",
+          plugins: {
+            legend: { position: "top" },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  const age = context.label;
+                  const bucket = context.dataset.label;
+                  const val = context.parsed.x || 0;
+                  const entry = ageWashMap.get(age) || { total: 0 };
+                  const total = entry.total || 0;
+                  const pct = mode === "share"
+                    ? val
+                    : total ? (val / total) * 100 : 0;
+                  const valueText = mode === "share"
+                    ? `${val.toFixed(1)}%`
+                    : val.toLocaleString(undefined, { maximumFractionDigits: 2 });
+                  return `${bucket}: ${valueText} (${pct.toFixed(1)}% of ${age})`;
+                }
+              }
+            },
+            title: {
+              display: true,
+              text:
+                mode === "share"
+                  ? `WASH share by age – ${country}, ${measure} (${metric}, ${year})${ageSuffix}`
+                  : `Age-specific burden by WASH bucket – ${country}, ${measure} (${metric}, ${year})${ageSuffix}`
+            }
+          },
+          scales: {
+            x: {
+              title: {
+                display: true,
+                text: mode === "share"
+                  ? "Share of age-specific total (%)"
+                  : `${measure} – ${metric}`
+              },
+              min: 0,
+              max: mode === "share" ? 100 : undefined
+            },
+            y: {
+              ticks: { autoSkip: false }
+            }
+          }
+        }
+      });
+
+      let core = 0, ext = 0, non = 0;
+      ageOrder.forEach(age => {
+        const entry = ageWashMap.get(age);
+        if (!entry) return;
+        core += entry.buckets["WASH Core"] || 0;
+        ext += entry.buckets["WASH Extended"] || 0;
+        non += entry.buckets["Non-WASH"] || 0;
+      });
+      const total = core + ext + non;
+      let summary = "";
+      if (total > 0) {
+        const corePct = (core / total) * 100;
+        const coreExtPct = ((core + ext) / total) * 100;
+        summary =
+          `In <strong>${country}</strong>, WASH Core causes account for ` +
+          `<strong>${corePct.toFixed(1)}%</strong> of the selected child ${measure.toLowerCase()}, ` +
+          `and WASH Core + Extended account for ` +
+          `<strong>${coreExtPct.toFixed(1)}%</strong>.`;
+      } else {
+        summary = "Total burden is zero for the current health filters.";
+      }
+      els.healthSummary.innerHTML = summary;
+    }
+
+    // =========================
+    // NUTRITION DATA & CHARTS
+    // =========================
+    function getNutritionFilteredData() {
+      const country = els.countrySelect.value;
+      const measure = els.measureSelect.value;
+      const metric = els.metricSelect.value;
+      const ages = new Set(getSelectedAges());
+      const catSet = getSelectedNutCategories();
+      const causeFilter = els.causeFilter.value.trim().toLowerCase();
+
+      const subset = rawData.filter(r =>
+        r.location_name === country &&
+        r.measure_name === measure &&
+        r.metric_name === metric &&
+        ages.has(r.age_name) &&
+        catSet.has(r.nutrition_category) &&
+        (!causeFilter || String(r.cause_name).toLowerCase().includes(causeFilter))
+      );
+
+      return { country, measure, metric, ages: Array.from(ages), year: latestYear, rows: subset };
+    }
+
+    function updateNutritionCharts() {
+      if (!rawData.length) return;
+
+      const mode = getMode();
+      const topN = Number(els.topNRange.value);
+      const { country, measure, metric, ages, year, rows } = getNutritionFilteredData();
+
+      if (!rows.length) {
+        if (nutritionCauseAgeChart) nutritionCauseAgeChart.destroy();
+        if (nutritionAgeCategoryChart) nutritionAgeCategoryChart.destroy();
+        if (nutritionAgeCauseChart) nutritionAgeCauseChart.destroy();
+        els.nutritionSummary.textContent = "No nutrition-relevant data for this combination.";
+        return;
+      }
+
+      buildNutritionCauseAgeChart(rows, { topN, ages, country, measure, metric, year });
+      buildNutritionAgeCategoryChart(rows, { mode, ages, country, measure, metric, year });
+      buildNutritionAgeCauseChart(rows, { topN, ages, country, measure, metric, year });
+
+      // Update nutrition summary including stunting/wasting
+      updateNutritionSummary(country, measure, metric);
+    }
+
+    function buildNutritionCauseAgeChart(rows, ctxInfo) {
+      const { topN, ages, country, measure, metric, year } = ctxInfo;
+
+      const causeAgeMap = new Map();
+      rows.forEach(r => {
+        const cause = String(r.cause_name);
+        const age = String(r.age_name);
+        if (!causeAgeMap.has(cause)) {
+          causeAgeMap.set(cause, { totals: {}, total: 0, cat: r.nutrition_category });
+        }
+        const obj = causeAgeMap.get(cause);
+        const v = Number(r.val) || 0;
+        obj.totals[age] = (obj.totals[age] || 0) + v;
+        obj.total += v;
+      });
+
+      const sortedCauses = Array.from(causeAgeMap.entries())
+        .sort((a, b) => b[1].total - a[1].total)
+        .slice(0, topN);
+
+      const causeLabels = sortedCauses.map(([cause]) => cause);
+      const ageOrder = Array.from(ages).slice().sort(sortByChildAge);
+
+      const datasets = ageOrder.map(age => ({
+        label: age,
+        data: sortedCauses.map(([_, obj]) => obj.totals[age] || 0),
+        stack: "stack1"
+      }));
+
+      if (nutritionCauseAgeChart) nutritionCauseAgeChart.destroy();
+
+      const ctx = document.getElementById("nutritionCauseAgeChart").getContext("2d");
+      const ageSuffix = buildAgeSuffix(Array.from(ages));
+
+      nutritionCauseAgeChart = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: causeLabels,
+          datasets
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: "y",
+          plugins: {
+            legend: { position: "top" },
+            tooltip: {
+              callbacks: {
+                title: function(context) {
+                  const cause = context[0].label;
+                  const entry = causeAgeMap.get(cause);
+                  const cat = entry ? entry.cat : "";
+                  const desc = NUTR_CAT_DESC[cat] || cat;
+                  return desc ? `${cause} – ${desc}` : cause;
+                },
+                label: function(context) {
+                  const val = context.parsed.x || 0;
+                  const cause = context.label;
+                  const age = context.dataset.label;
+                  const total = causeAgeMap.get(cause).total || 0;
+                  const pct = total ? (val / total) * 100 : 0;
+                  return `${age}: ${val.toLocaleString(undefined, { maximumFractionDigits: 2 })} (${pct.toFixed(1)}%)`;
+                }
+              }
+            },
+            title: {
+              display: true,
+              text: `Top ${topN} nutrition-relevant causes – ${country}, ${measure} (${metric}, ${year})${ageSuffix}`
+            }
+          },
+          scales: {
+            x: {
+              title: {
+                display: true,
+                text: `${measure} – ${metric}`
+              }
+            },
+            y: {
+              ticks: {
+                autoSkip: false,
+                maxTicksLimit: 20
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function buildNutritionAgeCategoryChart(rows, ctxInfo) {
+      const { mode, ages, country, measure, metric, year } = ctxInfo;
+
+      const ageCatMap = new Map();
+      rows.forEach(r => {
+        const age = String(r.age_name);
+        const cat = String(r.nutrition_category);
+        if (!ageCatMap.has(age)) {
+          ageCatMap.set(age, {
+            buckets: {
+              "Direct undernutrition": 0,
+              "WASH-linked infections": 0,
+              "Other": 0
+            },
+            total: 0
+          });
+        }
+        const obj = ageCatMap.get(age);
+        const v = Number(r.val) || 0;
+        obj.buckets[cat] = (obj.buckets[cat] || 0) + v;
+        obj.total += v;
+      });
+
+      const ageOrder = Array.from(ages).slice().sort(sortByChildAge);
+      const categories = ["Direct undernutrition", "WASH-linked infections", "Other"];
+      const styles = getComputedStyle(document.documentElement);
+      const colors = {
+        "Direct undernutrition": styles.getPropertyValue("--nut-direct").trim() || "#2e7d32",
+        "WASH-linked infections": styles.getPropertyValue("--nut-washinfx").trim() || "#6a1b9a",
+        "Other": styles.getPropertyValue("--nut-other").trim() || "#90a4ae"
+      };
+
+      const datasets = categories.map(cat => ({
+        label: cat,
+        data: ageOrder.map(age => {
+          const entry = ageCatMap.get(age);
+          if (!entry) return 0;
+          const rawVal = entry.buckets[cat] || 0;
+          if (mode === "share") {
+            const total = entry.total || 0;
+            return total ? (rawVal / total) * 100 : 0;
+          }
+          return rawVal;
+        }),
+        backgroundColor: colors[cat],
+        stack: "stack1"
+      }));
+
+      if (nutritionAgeCategoryChart) nutritionAgeCategoryChart.destroy();
+
+      const ctx = document.getElementById("nutritionAgeCategoryChart").getContext("2d");
+      const ageSuffix = buildAgeSuffix(Array.from(ages));
+
+      nutritionAgeCategoryChart = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: ageOrder,
+          datasets
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: "y",
+          plugins: {
+            legend: { position: "top" },
+            tooltip: {
+              callbacks: {
+                title: function(context) {
+                  const cat = context[0].dataset.label;
+                  const desc = NUTR_CAT_DESC[cat] || cat;
+                  return desc;
+                },
+                label: function(context) {
+                  const age = context.label;
+                  const cat = context.dataset.label;
+                  const val = context.parsed.x || 0;
+                  const entry = ageCatMap.get(age) || { total: 0 };
+                  const total = entry.total || 0;
+                  const pct = mode === "share"
+                    ? val
+                    : total ? (val / total) * 100 : 0;
+                  const valueText = mode === "share"
+                    ? `${val.toFixed(1)}%`
+                    : val.toLocaleString(undefined, { maximumFractionDigits: 2 });
+                  return `${age} – ${cat}: ${valueText} (${pct.toFixed(1)}% of ${age})`;
+                }
+              }
+            },
+            title: {
+              display: true,
+              text:
+                mode === "share"
+                  ? `Direct undernutrition & WASH-linked infections – share by age – ${country}, ${measure} (${metric}, ${year})${ageSuffix}`
+                  : `Direct undernutrition & WASH-linked infections – burden by age – ${country}, ${measure} (${metric}, ${year})${ageSuffix}`
+            }
+          },
+          scales: {
+            x: {
+              title: {
+                display: true,
+                text: mode === "share"
+                  ? "Share of age-specific total (%)"
+                  : `${measure} – ${metric}`
+              },
+              min: 0,
+              max: mode === "share" ? 100 : undefined
+            },
+            y: {
+              ticks: { autoSkip: false }
+            }
+          }
+        }
+      });
+    }
+
+    // New: Nutrition – Chart 3 (age on axis, causes in legend)
+    function buildNutritionAgeCauseChart(rows, ctxInfo) {
+      const { topN, ages, country, measure, metric, year } = ctxInfo;
+
+      const causeAgeMap = new Map();
+      rows.forEach(r => {
+        const cause = String(r.cause_name);
+        const age = String(r.age_name);
+        const cat = String(r.nutrition_category);
+        if (!causeAgeMap.has(cause)) {
+          causeAgeMap.set(cause, { totals: {}, total: 0, cat });
+        }
+        const obj = causeAgeMap.get(cause);
+        const v = Number(r.val) || 0;
+        obj.totals[age] = (obj.totals[age] || 0) + v;
+        obj.total += v;
+      });
+
+      const sortedCauses = Array.from(causeAgeMap.entries())
+        .sort((a, b) => b[1].total - a[1].total)
+        .slice(0, topN);
+
+      const ageOrder = Array.from(ages).slice().sort(sortByChildAge);
+
+      const styles = getComputedStyle(document.documentElement);
+      const catColors = {
+        "Direct undernutrition": styles.getPropertyValue("--nut-direct").trim() || "#2e7d32",
+        "WASH-linked infections": styles.getPropertyValue("--nut-washinfx").trim() || "#6a1b9a",
+        "Other": styles.getPropertyValue("--nut-other").trim() || "#90a4ae"
+      };
+
+      const datasets = sortedCauses.map(([cause, obj]) => {
+        const cat = obj.cat;
+        return {
+          label: cause,
+          data: ageOrder.map(age => obj.totals[age] || 0),
+          backgroundColor: catColors[cat] || "#90a4ae",
+          stack: "stack1"
+        };
+      });
+
+      if (nutritionAgeCauseChart) nutritionAgeCauseChart.destroy();
+
+      const ctx = document.getElementById("nutritionAgeCauseChart").getContext("2d");
+      const ageSuffix = buildAgeSuffix(Array.from(ages));
+
+      nutritionAgeCauseChart = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: ageOrder,
+          datasets
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: "x", // age on the horizontal axis
+          plugins: {
+            legend: { position: "top" },
+            tooltip: {
+              callbacks: {
+                title: function(context) {
+                  const age = context[0].label;
+                  return `Age: ${age}`;
+                },
+                label: function(context) {
+                  const age = context.label;
+                  const cause = context.dataset.label;
+                  const val = context.parsed.y || context.parsed.x || 0;
+                  const entry = causeAgeMap.get(cause) || { cat: null };
+                  const cat = entry.cat;
+                  const catDesc = NUTR_CAT_DESC[cat] || cat || "";
+                  const extra = catDesc ? ` – ${catDesc}` : "";
+                  return `${cause}${extra}: ${val.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+                }
+              }
+            },
+            title: {
+              display: true,
+              text: `Age profile of top ${topN} nutrition-relevant causes – ${country}, ${measure} (${metric}, ${year})${ageSuffix}`
+            }
+          },
+          scales: {
+            x: {
+              title: {
+                display: true,
+                text: "Age band"
+              }
+            },
+            y: {
+              title: {
+                display: true,
+                text: `${measure} – ${metric}`
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // ----- World Bank JME stunting/wasting -----
+    function fetchWorldBankIndicatorSeries(iso3, indicatorCode) {
+      const url = `https://api.worldbank.org/v2/country/${iso3}/indicator/${indicatorCode}?format=json&per_page=60`;
+      return fetch(url)
+        .then(resp => {
+          if (!resp.ok) {
+            throw new Error(`World Bank API error: ${resp.status}`);
+          }
+          return resp.json();
+        })
+        .then(json => {
+          const arr = Array.isArray(json) ? json[1] : null;
+          if (!arr) return [];
+          const series = arr
+            .filter(e => e && e.value != null)
+            .map(e => ({
+              year: Number(e.date),
+              value: Number(e.value)
+            }))
+            .sort((a, b) => a.year - b.year);
+          return series;
+        });
+    }
+
+    function ensureNutritionData(iso3) {
+      if (nutritionCache[iso3]) {
+        return Promise.resolve(nutritionCache[iso3]);
+      }
+      const keys = Object.keys(WB_INDICATORS); // stunting, wasting
+      const promises = keys.map(key => {
+        const code = WB_INDICATORS[key].code;
+        return fetchWorldBankIndicatorSeries(iso3, code).then(series => ({ key, series }));
+      });
+      return Promise.all(promises).then(results => {
+        const obj = {};
+        results.forEach(({ key, series }) => {
+          obj[key] = series;
+        });
+        nutritionCache[iso3] = obj;
+        return obj;
+      });
+    }
+
+    function getLatestValueForYear(series, refYear) {
+      if (!series || !series.length) return null;
+      let best = null;
+      series.forEach(dp => {
+        if (!isFinite(dp.year) || dp.value == null) return;
+        if (dp.year <= refYear) {
+          if (!best || dp.year > best.year) best = dp;
+        }
+      });
+      if (!best) best = series[series.length - 1];
+      return best;
+    }
+
+    function computeUnder5NutritionBurden(country, measure, metric) {
+      const rows = rawData.filter(r =>
+        r.location_name === country &&
+        r.measure_name === measure &&
+        r.metric_name === metric &&
+        UNDER5_AGES.includes(r.age_name)
+      );
+      let direct = 0, washInf = 0, other = 0;
+      rows.forEach(r => {
+        const v = Number(r.val) || 0;
+        if (r.nutrition_category === "Direct undernutrition") direct += v;
+        else if (r.nutrition_category === "WASH-linked infections") washInf += v;
+        else other += v;
+      });
+      const total = direct + washInf + other;
+      if (total <= 0) {
+        return { total: 0, direct, washInf, other, directShare: 0, washInfShare: 0, combinedShare: 0 };
+      }
+      return {
+        total,
+        direct,
+        washInf,
+        other,
+        directShare: (direct / total) * 100,
+        washInfShare: (washInf / total) * 100,
+        combinedShare: ((direct + washInf) / total) * 100
+      };
+    }
+
+    function updateNutritionSummary(country, measure, metric) {
+      const iso3 = getIso3ForCountryName(country);
+      const burden = computeUnder5NutritionBurden(country, measure, metric);
+
+      // Base summary from GBD
+      let summaryParts = [];
+      if (burden.total > 0) {
+        summaryParts.push(
+          `For <strong>under-fives</strong> in <strong>${country}</strong>, direct undernutrition accounts for ` +
+          `<strong>${burden.directShare.toFixed(1)}%</strong> of ${measure.toLowerCase()}, ` +
+          `WASH-linked infections account for <strong>${burden.washInfShare.toFixed(1)}%</strong>, ` +
+          `and together they make up <strong>${burden.combinedShare.toFixed(1)}%</strong> of the burden.`
+        );
+      } else {
+        summaryParts.push(
+          `Under-five ${measure.toLowerCase()} from the GBD extract are zero or not available for ${country} (for the current metric).`
+        );
+      }
+
+      // Add stunting/wasting context
+      if (!iso3) {
+        summaryParts.push(` No ISO3 code for this country in the current mapping, so stunting/wasting could not be fetched.`);
+        els.nutritionSummary.innerHTML = summaryParts.join(" ");
+        return;
+      }
+
+      els.nutritionStatus.textContent = `Loading stunting/wasting for ${country} (${iso3})…`;
+
+      ensureNutritionData(iso3)
+        .then(data => {
+          const stuntingLatest = getLatestValueForYear(data.stunting, latestYear);
+          const wastingLatest = getLatestValueForYear(data.wasting, latestYear);
+
+          if (stuntingLatest && wastingLatest) {
+            summaryParts.push(
+              ` Latest JME estimates (World Bank API): under-five stunting is ` +
+              `<strong>${stuntingLatest.value.toFixed(1)}%</strong> (year ${stuntingLatest.year}) and wasting is ` +
+              `<strong>${wastingLatest.value.toFixed(1)}%</strong> (year ${wastingLatest.year}).`
+            );
+          } else if (stuntingLatest) {
+            summaryParts.push(
+              ` Latest JME estimate (World Bank API): under-five stunting is ` +
+              `<strong>${stuntingLatest.value.toFixed(1)}%</strong> (year ${stuntingLatest.year}).`
+            );
+          } else if (wastingLatest) {
+            summaryParts.push(
+              ` Latest JME estimate (World Bank API): under-five wasting is ` +
+              `<strong>${wastingLatest.value.toFixed(1)}%</strong> (year ${wastingLatest.year}).`
+            );
+          } else {
+            summaryParts.push(
+              ` No recent stunting or wasting values found for this country in the World Bank JME series.`
+            );
+          }
+
+          els.nutritionSummary.innerHTML = summaryParts.join(" ");
+          els.nutritionStatus.textContent = `Nutrition data loaded for ${country}.`;
+        })
+        .catch(err => {
+          console.error(err);
+          summaryParts.push(` Error fetching stunting/wasting from the World Bank API.`);
+          els.nutritionSummary.innerHTML = summaryParts.join(" ");
+          els.nutritionStatus.textContent = "Error loading nutrition data from World Bank API. See console.";
+        });
+    }
+
+    // =========================
+    // START
+    // =========================
+    document.addEventListener("DOMContentLoaded", () => {
+      initSplash();
+      loadCsv();
+    });
+  </script>
+</body>
+</html>
