@@ -2,7 +2,7 @@
 
 This repository contains a lightweight, browser-based tool to explore how children are affected by different causes of morbidity and mortality across age bands, with a specific focus on **Water, Sanitation and Hygiene (WASH)**–related causes.
 
-It is designed as an **internal UNICEF-style analytical prototype**, built in **pure HTML, JavaScript and CSS**, using a single-page app pattern. No backend is required – everything runs in the browser.
+It is designed as an ** analytical prototype**, built in **pure HTML, JavaScript and CSS**, using a single-page app pattern. No backend is required – everything runs in the browser.
 
 ---
 
