@@ -2,7 +2,7 @@
 
 This repository contains a lightweight, browser-based tool to explore how children are affected by different causes of morbidity and mortality across age bands, with a specific focus on **Water, Sanitation and Hygiene (WASH)**–related causes.
 
-It is designed as an ** analytical prototype**, built in **pure HTML, JavaScript and CSS**, using a single-page app pattern. No backend is required – everything runs in the browser.
+It is designed as an **analytical prototype**, built in **pure HTML, JavaScript and CSS**, using a single-page app pattern. No backend is required – everything runs in the browser.
 
 ---
 
@@ -16,7 +16,7 @@ The tool helps to answer questions like:
 
 It is primarily intended for:
 
-* **UNICEF WASH and Health teams** preparing briefs, slides, and talking points.
+* **project teams** preparing briefs, slides, and talking points.
 * **Policy and advocacy discussions** with Ministries of Health, Water, and Finance.
 * **Internal brainstorming** on where WASH investments might yield the biggest health gains by age.
 
@@ -71,7 +71,7 @@ The app:
 Everything lives in a single `index.html` file:
 
 * **HTML** – Layout, controls, splash screen, chart containers.
-* **CSS** – UNICEF-inspired styling, responsive layout, splash overlay.
+* **CSS** – Neutral styling, responsive layout, splash overlay.
 * **JavaScript**:
 
   * [PapaParse](https://www.papaparse.com/) (CDN) to load and parse the CSV (`IHMEGBD2023.csv`).
