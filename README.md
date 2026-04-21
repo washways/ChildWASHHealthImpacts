@@ -360,7 +360,7 @@ Some concrete improvements to consider:
 
 * Improve **keyboard navigation** and ARIA attributes.
 * Add **language support** (e.g. English/French) via a simple translation dictionary and a language toggle.
-* Offer a **colourblind-safe palette** option while keeping UNICEF-style branding.
+* Offer a **colourblind-safe palette**.
 
 ---
 
@@ -376,4 +376,4 @@ Some concrete improvements to consider:
 ## 10. Acknowledgements
 
 * **Data**: Global Burden of Disease Study 2023 (GBD 2023) Results, Institute for Health Metrics and Evaluation (IHME).
-* **Concept & implementation**: UNICEF WASH team prototype for internal analytical use.
+* **Concept & implementation**:  prototype for analytical use only.
