@@ -1,9 +1,8 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Child Health & Nutrition – WASH Focus</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+<html lang="en"><head>
+  <meta charset="UTF-8">
+  <title>ChildWASHHealthImpacts</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <!-- Chart.js and PapaParse from CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
@@ -343,7 +342,12 @@
       gap: 0.25rem;
     }
   </style>
-</head>
+<script async="" src="https://www.googletagmanager.com/gtag/js?id=G-64GCB9QDB5"></script><script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-64GCB9QDB5');
+</script></head>
 <body>
   <!-- Splash / methodology overlay -->
   <div id="splash">
@@ -374,7 +378,7 @@
       </p>
       <div class="splash-actions">
         <label>
-          <input type="checkbox" id="dontShowSplash" />
+          <input type="checkbox" id="dontShowSplash">
           Don’t show this again on this device
         </label>
         <button id="dismissSplashBtn">Start exploring</button>
@@ -414,7 +418,7 @@
       <div class="control-group">
         <label for="ageSelect">Child age bands</label>
         <div class="control-row-inline">
-          <select id="ageSelect" multiple size="8" style="flex:1 1 0;"></select>
+          <select id="ageSelect" multiple="" size="8" style="flex:1 1 0;"></select>
           <button id="selectAllAgesBtn" type="button" class="secondary">All</button>
         </div>
         <div class="multi-help">Hold Ctrl (Windows) or Cmd (Mac) to select multiple.</div>
@@ -426,20 +430,20 @@
       <div class="control-group">
         <label>Display mode (age-based charts)</label>
         <div class="radio-row">
-          <label><input type="radio" name="mode" value="absolute" checked /> Absolute burden</label>
-          <label><input type="radio" name="mode" value="share" /> Share of age-specific total (%)</label>
+          <label><input type="radio" name="mode" value="absolute" checked=""> Absolute burden</label>
+          <label><input type="radio" name="mode" value="share"> Share of age-specific total (%)</label>
         </div>
       </div>
 
       <div class="control-group">
         <label for="topNRange">Top N causes (cause-based charts)</label>
-        <input type="range" id="topNRange" min="5" max="25" value="10" />
+        <input type="range" id="topNRange" min="5" max="25" value="10">
         <div class="slider-value"><span id="topNValue">10</span> causes</div>
       </div>
 
       <div class="control-group">
         <label for="causeFilter">Filter causes (text)</label>
-        <input id="causeFilter" type="text" placeholder="e.g. diarrheal, sepsis, malnutrition…" />
+        <input id="causeFilter" type="text" placeholder="e.g. diarrheal, sepsis, malnutrition…">
       </div>
 
       <!-- Health-specific controls -->
@@ -447,9 +451,9 @@
         <div class="control-group">
           <label>Include WASH buckets (Health tab)</label>
           <div class="checkbox-col">
-            <label><input type="checkbox" name="washBucket" value="WASH Core" checked /> WASH Core</label>
-            <label><input type="checkbox" name="washBucket" value="WASH Extended" checked /> WASH Extended</label>
-            <label><input type="checkbox" name="washBucket" value="Non-WASH" checked /> Non-WASH</label>
+            <label><input type="checkbox" name="washBucket" value="WASH Core" checked=""> WASH Core</label>
+            <label><input type="checkbox" name="washBucket" value="WASH Extended" checked=""> WASH Extended</label>
+            <label><input type="checkbox" name="washBucket" value="Non-WASH" checked=""> Non-WASH</label>
           </div>
         </div>
 
@@ -458,7 +462,7 @@
         </div>
 
         <footer>
-          Health data expected: <code>IHMEGBD2023.csv</code> in this folder.<br />
+          Health data expected: <code>IHMEGBD2023.csv</code> in this folder.<br>
           Run <code>python -m http.server</code> and open <code>http://localhost:8000</code>.
         </footer>
       </div>
@@ -468,9 +472,9 @@
         <div class="control-group">
           <label>Include nutrition categories (Nutrition tab)</label>
           <div class="checkbox-col">
-            <label><input type="checkbox" name="nutCategory" value="Direct undernutrition" checked /> Direct undernutrition</label>
-            <label><input type="checkbox" name="nutCategory" value="WASH-linked infections" checked /> WASH-linked infections</label>
-            <label><input type="checkbox" name="nutCategory" value="Other" /> Other causes</label>
+            <label><input type="checkbox" name="nutCategory" value="Direct undernutrition" checked=""> Direct undernutrition</label>
+            <label><input type="checkbox" name="nutCategory" value="WASH-linked infections" checked=""> WASH-linked infections</label>
+            <label><input type="checkbox" name="nutCategory" value="Other"> Other causes</label>
           </div>
         </div>
 
@@ -514,7 +518,7 @@
           <div id="healthSummary"></div>
 
           <footer>
-            Source: Global Burden of Disease Study 2023 (GBD 2023) Results, Institute for Health Metrics and Evaluation (IHME).<br />
+            Source: Global Burden of Disease Study 2023 (GBD 2023) Results, Institute for Health Metrics and Evaluation (IHME).<br>
             Internal analytical prototype – not for standalone publication.
           </footer>
         </section>
@@ -544,7 +548,7 @@
 
           <footer>
             Nutrition causes are approximated from GBD cause labels. Under-five stunting/wasting and sanitation are taken from the World Bank
-            World Development Indicators (UNICEF/WHO/World Bank JME series & WASH indicators).
+            World Development Indicators (UNICEF/WHO/World Bank JME series &amp; WASH indicators).
           </footer>
         </section>
 
@@ -570,7 +574,7 @@
           <canvas id="sanitationNutritionChart"></canvas>
           <footer>
             Sanitation indicators: <em>People using at least basic sanitation services (% of population)</em> and
-            <em>People using safely managed sanitation services (% of population)</em> (World Bank WDI, codes SH.STA.BASS.ZS and SH.STA.SMSS.ZS).<br />
+            <em>People using safely managed sanitation services (% of population)</em> (World Bank WDI, codes SH.STA.BASS.ZS and SH.STA.SMSS.ZS).<br>
             Stunting: <em>Prevalence of stunting, height for age (% of children under 5)</em> (World Bank WDI, SH.STA.STNT.ZS).
           </footer>
         </section>
@@ -2124,5 +2128,6 @@
       loadCsv();
     });
   </script>
-</body>
-</html>
+
+
+</body></html>
